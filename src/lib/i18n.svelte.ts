@@ -5,7 +5,7 @@ type Locale = 'en' | 'zh';
 const dictionaries: Record<Locale, Record<string, string>> = {
   en: {
     // Sidebar
-    'sidebar.title': 'DevTerm',
+    'sidebar.title': 'Workbase',
     'sidebar.add_project': 'Add Project',
     'sidebar.drag_hint': 'Drag to reorder',
     'sidebar.new_terminal': '+ New Terminal',
@@ -27,13 +27,13 @@ const dictionaries: Record<Locale, Record<string, string>> = {
     'sidebar.default_terminal': 'Terminal {n}',
 
     // Welcome screen
-    'welcome.title': 'DevTerm',
+    'welcome.title': 'Workbase',
     'welcome.subtitle': 'A project-centric terminal workspace',
     'welcome.hint1': 'Add a project, then create a terminal session.',
     'welcome.hint2': 'Press <kbd>Ctrl+B</kbd> to toggle sidebar, <kbd>Ctrl+Shift+P</kbd> for commands, <kbd>Ctrl+Shift+E</kbd> for files, <kbd>Ctrl+Shift+F</kbd> to search.',
 
     // Status bar
-    'status.ready': 'DevTerm v0.1.0 — Ready',
+    'status.ready': 'Workbase v0.1.0 — Ready',
     'status.no_terminal': 'No terminal',
     'status.tab_of': 'Tab {n} of {total}',
     'status.file_changed': 'file changed',
@@ -101,7 +101,7 @@ const dictionaries: Record<Locale, Record<string, string>> = {
     'error.unknown': 'An unexpected error occurred',
     'error.retry': 'Retry',
     'error.reload': 'Reload Application',
-    'error.crash_detected': 'DevTerm closed unexpectedly last session.',
+    'error.crash_detected': 'Workbase closed unexpectedly last session.',
     'error.crash_view': 'View Details',
     'error.crash_dismiss': 'Dismiss',
 
@@ -157,7 +157,7 @@ const dictionaries: Record<Locale, Record<string, string>> = {
   },
   zh: {
     // Sidebar
-    'sidebar.title': 'DevTerm',
+    'sidebar.title': 'Workbase',
     'sidebar.add_project': '添加项目',
     'sidebar.drag_hint': '拖拽排序',
     'sidebar.new_terminal': '+ 新建终端',
@@ -179,13 +179,13 @@ const dictionaries: Record<Locale, Record<string, string>> = {
     'sidebar.default_terminal': '终端 {n}',
 
     // Welcome screen
-    'welcome.title': 'DevTerm',
+    'welcome.title': 'Workbase',
     'welcome.subtitle': '以项目为中心的终端工作台',
     'welcome.hint1': '添加一个项目，然后创建终端会话。',
     'welcome.hint2': '<kbd>Ctrl+B</kbd> 切换侧栏、<kbd>Ctrl+Shift+P</kbd> 命令面板、<kbd>Ctrl+Shift+E</kbd> 文件面板、<kbd>Ctrl+Shift+F</kbd> 搜索。',
 
     // Status bar
-    'status.ready': 'DevTerm v0.1.0 — 就绪',
+    'status.ready': 'Workbase v0.1.0 — 就绪',
     'status.no_terminal': '无终端',
     'status.tab_of': '第 {n} 个标签（共 {total} 个）',
     'status.file_changed': '文件已变更',
@@ -253,7 +253,7 @@ const dictionaries: Record<Locale, Record<string, string>> = {
     'error.unknown': '发生了未知错误',
     'error.retry': '重试',
     'error.reload': '重新加载应用',
-    'error.crash_detected': 'DevTerm 上次意外关闭了。',
+    'error.crash_detected': 'Workbase 上次意外关闭了。',
     'error.crash_view': '查看详情',
     'error.crash_dismiss': '忽略',
 

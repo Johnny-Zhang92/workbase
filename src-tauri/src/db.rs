@@ -461,7 +461,7 @@ mod tests {
     static TEST_COUNTER: AtomicU32 = AtomicU32::new(0);
 
     fn setup() -> Database {
-        let dir = std::env::temp_dir().join("devterm_test");
+        let dir = std::env::temp_dir().join("workbase_test");
         std::fs::create_dir_all(&dir).ok();
         let n = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
         let path = dir.join(format!("test_{}_{}.db", std::process::id(), n));
@@ -653,8 +653,8 @@ mod tests {
     #[test]
     fn test_get_db_path_returns_path() {
         let path = get_db_path();
-        assert!(path.ends_with("devterm.db"));
-        assert!(path.to_string_lossy().contains("devterm"));
+        assert!(path.ends_with("workbase.db"));
+        assert!(path.to_string_lossy().contains("workbase"));
     }
 }
 
@@ -679,5 +679,5 @@ pub fn get_db_path() -> PathBuf {
             })
     };
 
-    base.join("devterm").join("devterm.db")
+    base.join("workbase").join("workbase.db")
 }

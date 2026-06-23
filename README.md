@@ -1,4 +1,4 @@
-# DevTerm
+# Workbase
 
 A lightweight, project-centric terminal workspace for developers who use CLI AI tools like Claude Code and Codex.
 
@@ -6,9 +6,9 @@ A lightweight, project-centric terminal workspace for developers who use CLI AI 
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 ![License](https://img.shields.io/badge/license-Source%20Available-orange)
 
-## What is DevTerm?
+## What is Workbase?
 
-DevTerm organizes your terminal around **projects**, not just loose tabs. Each project remembers its sessions — plain shells, Claude Code chats, Codex sessions — and restores them when you reopen the app.
+Workbase organizes your terminal around **projects**, not just loose tabs. Each project remembers its sessions — plain shells, Claude Code chats, Codex sessions — and restores them when you reopen the app.
 
 - **Project-first** — Sidebar shows projects → sessions. Everything persists across restarts.
 - **Multi-tab terminals** — One tab per session, with split panes.
@@ -21,7 +21,7 @@ DevTerm organizes your terminal around **projects**, not just loose tabs. Each p
 
 ### Windows
 
-Download the `.msi` installer from [Releases](https://github.com/ZhangLiHua/devterm/releases).
+Download the `.msi` installer from [Releases](https://github.com/ZhangLiHua/workbase/releases).
 
 ### macOS / Linux
 

@@ -1,12 +1,12 @@
 [package]
-name = "devterm"
+name = "workbase"
 version = "0.1.0"
 description = "A lightweight, project-centric terminal workspace"
 authors = ["ZhangLiHua"]
 edition = "2021"
 
 [lib]
-name = "devterm_lib"
+name = "workbase_lib"
 crate-type = ["lib", "cdylib", "staticlib"]
 
 [build-dependencies]
@@ -35,4 +35,4 @@ rusqlite = { version = "0.31", features = ["bundled"] }
 opt-level = "s"
 strip = true
 lto = true
-codegen-units = 1
+codegen-units = 4

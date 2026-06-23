@@ -43,7 +43,7 @@ fn write_crash_dump(crashes_dir: Option<&std::path::Path>, info: &std::panic::Pa
         Err(_) => return,
     };
 
-    let _ = writeln!(f, "DevTerm Crash Report");
+    let _ = writeln!(f, "Workbase Crash Report");
     let _ = writeln!(f, "Time: {}", chrono::Local::now().format("%Y-%m-%d %H:%M:%S"));
     let _ = writeln!(f, "Location: {}", location);
     let _ = writeln!(f, "Message: {}", msg);
@@ -51,7 +51,7 @@ fn write_crash_dump(crashes_dir: Option<&std::path::Path>, info: &std::panic::Pa
     let _ = writeln!(f, "{}", std::backtrace::Backtrace::force_capture());
 
     eprintln!(
-        "DevTerm crashed! Crash report written to: {}",
+        "Workbase crashed! Crash report written to: {}",
         path.display()
     );
 }

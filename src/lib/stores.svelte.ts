@@ -9,7 +9,7 @@ export const appState = $state({
   activeSessionId: null as string | null,
   sidebarVisible: true,
   sidebarWidth: 280,
-  statusText: 'DevTerm v0.1.0 — Ready',
+  statusText: 'Workbase v0.1.0 — Ready',
   closeTabSignal: null as string | null,
   closeAllTabs: false,
   filePanelVisible: true,

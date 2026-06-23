@@ -1,6 +1,6 @@
 {
   "identifier": "default",
-  "description": "Default capabilities for DevTerm",
+  "description": "Default capabilities for Workbase",
   "windows": ["*"],
   "permissions": [
     "core:default",

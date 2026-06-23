@@ -1,3 +1,3 @@
 fn main() {
-    devterm_lib::run()
+    workbase_lib::run()
 }

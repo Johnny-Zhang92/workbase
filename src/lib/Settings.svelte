@@ -14,7 +14,7 @@
   let fgColor = $state('#d4d4d4');
   let shellPath = $state('');
   let selectToCopy = $state(false);
-  let currentTheme = $state('devterm-dark');
+  let currentTheme = $state('workbase-dark');
   let detectedShell = $state('');
 
   // Template management
@@ -132,7 +132,7 @@
   }
 
   function apply() {
-    (globalThis as any).__devtermApplyTheme?.();
+    (globalThis as any).__workbaseApplyTheme?.();
   }
 
   function startRecording(actionId: string) {

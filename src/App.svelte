@@ -102,7 +102,7 @@
     }
     const detail = [msg, source, `L${lineno}:${colno}`].filter(Boolean).join(' | ');
     globalError = detail;
-    console.error('[DevTerm Error]', detail);
+    console.error('[Workbase Error]', detail);
   }
 
   $effect(() => {
@@ -526,7 +526,7 @@
   }
 
   // Register apply callback for settings component
-  (globalThis as any).__devtermApplyTheme = applyThemeToTerminals;
+  (globalThis as any).__workbaseApplyTheme = applyThemeToTerminals;
 
   async function addProjectFromPalette() {
     closePalette();
@@ -1159,7 +1159,7 @@
 <!-- Update notification -->
 {#if updateAvailable}
   <div class="update-banner">
-    <span class="update-msg">DevTerm {updateVersion} is available. Current: v0.1.0</span>
+    <span class="update-msg">Workbase {updateVersion} is available. Current: v0.1.0</span>
     <button class="update-btn" onclick={doUpdate} disabled={updateDownloading}>
       {updateDownloading ? 'Downloading...' : 'Update'}
     </button>

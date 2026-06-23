@@ -14,8 +14,8 @@ export interface TerminalTheme {
 
 export const PRESETS: TerminalTheme[] = [
   {
-    name: 'devterm-dark',
-    label: 'DevTerm Dark',
+    name: 'workbase-dark',
+    label: 'Workbase Dark',
     background: '#1e1e1e',
     foreground: '#d4d4d4',
     cursor: '#ffffff',
@@ -120,7 +120,7 @@ export const PRESETS: TerminalTheme[] = [
   },
 ];
 
-const DEFAULT_THEME = 'devterm-dark';
+const DEFAULT_THEME = 'workbase-dark';
 
 export function getTheme(name: string): TerminalTheme {
   return PRESETS.find(t => t.name === name) ?? PRESETS[0];

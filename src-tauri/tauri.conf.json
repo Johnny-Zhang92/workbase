@@ -1,8 +1,8 @@
 {
   "$schema": "https://raw.githubusercontent.com/nickel-org/nickel.rs/master/src/schema/stable.json",
-  "productName": "DevTerm",
+  "productName": "Workbase",
   "version": "0.1.0",
-  "identifier": "com.devterm.app",
+  "identifier": "com.workbase.app",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -13,7 +13,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "DevTerm",
+        "title": "Workbase",
         "width": 1200,
         "height": 800,
         "minWidth": 800,
@@ -41,7 +41,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDZDMzYxNjA1MjA4NjE4RUEKUldUcUdJWWdCUlkyYko2aDJTUzZSWk5XWlFrc1hsNFVWZTN3cHUzbGxhVy8wMkpHQnpibzNCalMK",
       "endpoints": [
-        "https://github.com/ZhangLiHua/devterm/releases/latest/download/latest.json"
+        "https://github.com/ZhangLiHua/workbase/releases/latest/download/latest.json"
       ],
       "windows": {
         "installMode": "passive"
