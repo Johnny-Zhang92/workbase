@@ -659,30 +659,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "devterm"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "env_logger",
- "ignore",
- "log",
- "notify",
- "portable-pty",
- "rusqlite",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-fs",
- "tauri-plugin-shell",
- "tauri-plugin-updater",
- "thiserror 2.0.18",
- "walkdir",
- "which",
-]
-
-[[package]]
 name = "digest"
 version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5706,6 +5682,30 @@ dependencies = [
  "serde_json",
  "unicode-xid",
  "wasmparser",
+]
+
+[[package]]
+name = "workbase"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "env_logger",
+ "ignore",
+ "log",
+ "notify",
+ "portable-pty",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-fs",
+ "tauri-plugin-shell",
+ "tauri-plugin-updater",
+ "thiserror 2.0.18",
+ "walkdir",
+ "which",
 ]
 
 [[package]]

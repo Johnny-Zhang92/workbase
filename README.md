@@ -4,7 +4,10 @@ A lightweight, project-centric terminal workspace for developers who use CLI AI 
 
 ![Version](https://img.shields.io/badge/version-0.1.0-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
-![License](https://img.shields.io/badge/license-Source%20Available-orange)
+![License](https://img.shields.io/badge/license-Proprietary-red)
+
+> [!IMPORTANT]
+> This is a **public releases and documentation repository only**. The source code of Workbase is not included. Workbase is proprietary software — you may download and use official binary releases under the [EULA](./EULA.md). See [LICENSE](./LICENSE) for details.
 
 ## What is Workbase?
 
@@ -53,6 +56,10 @@ Coming soon.
 
 ## License
 
-This software is **source available**. You may use it for free, but redistribution, modification, and commercial use are restricted. See [LICENSE](./LICENSE) for details.
+Workbase is **proprietary software**. All rights reserved.
+
+This repository exists for public releases, documentation, issue tracking, and downloads only. The source code is not included and is not licensed under any open source or source-available license.
+
+Download and use of official binary releases is governed by the [End User License Agreement](./EULA.md). See [LICENSE](./LICENSE) and [PRIVACY.md](./PRIVACY.md) for additional details.
 
 © 2026 ZhangLiHua

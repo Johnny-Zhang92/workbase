@@ -1,34 +1,11 @@
-Workbase License — Source Available v1.0
+Copyright © 2026 ZhangLiHua. All rights reserved.
 
-Copyright (c) 2026 ZhangLiHua. All rights reserved.
+Workbase is proprietary software.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to use
-the Software for personal or commercial purposes, subject to the following
-restrictions:
+This repository is provided for public releases, documentation, issue tracking, and downloads. The source code of Workbase is not included in this repository and is not licensed for use, copying, modification, distribution, or commercial exploitation.
 
-1. REDISTRIBUTION: You may NOT redistribute, sublicense, or publish the
-   Software or any modified version of it in source or binary form.
+You may download and use official Workbase binary releases only as permitted by the accompanying End User License Agreement.
 
-2. MODIFICATION: You may NOT modify, adapt, or create derivative works
-   of the Software.
+No rights are granted except those expressly stated in the End User License Agreement or in a separate written agreement from the copyright holder.
 
-3. COMMERCIAL USE OF THE SOFTWARE ITSELF: You may NOT sell, lease, or
-   commercially license the Software itself. Using the Software as a tool
-   in your own work (e.g., developing your own applications with it) is
-   permitted.
-
-4. ATTRIBUTION: Any use of the Software in a context where its origin is
-   visible (e.g., screenshots, demos) must retain attribution to the
-   original project name "Workbase".
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-DEALINGS IN THE SOFTWARE.
-
-This license may be updated in future versions. The license that
-accompanies the version of the Software you obtained governs your use.
+See EULA.md for details.
