@@ -2,7 +2,7 @@
 
 A lightweight, project-centric terminal workspace for developers who use CLI AI tools like Claude Code and Codex.
 
-![Version](https://img.shields.io/badge/version-0.1.0-blue)
+![Version](https://img.shields.io/badge/version-0.1.1-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 ![License](https://img.shields.io/badge/license-Proprietary-red)
 
