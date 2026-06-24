@@ -32,7 +32,8 @@ thiserror = "2"
 rusqlite = { version = "0.31", features = ["bundled"] }
 
 [profile.release]
-opt-level = "s"
+opt-level = 3
 strip = true
 lto = true
 codegen-units = 4
+panic = "abort"
