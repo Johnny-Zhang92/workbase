@@ -7,6 +7,8 @@
 
   let dragStart = $state(0);
   let dragging = $state(false);
+  let dragRaf: number | null = null;
+  let pendingWidth: number | null = null;
   let expandedProjects = $state<number[]>([]);
   let hasAutoRestored = $state(false);
   let editingType = $state<'project' | 'session' | null>(null);
@@ -377,14 +379,30 @@
     if (appState.activeProjectId !== id) selectProject(id);
   }
 
-  function onDragStart(e: MouseEvent) { dragging = true; dragStart = e.clientX; }
-  function onDragMove(e: MouseEvent) {
-    if (!dragging) return;
-    const diff = e.clientX - dragStart;
-    appState.sidebarWidth = Math.max(180, Math.min(500, appState.sidebarWidth + diff));
-    dragStart = e.clientX;
+  function onDragStart(e: MouseEvent) {
+    dragging = true; dragStart = e.clientX;
+    window.addEventListener('mousemove', onDragMove);
+    window.addEventListener('mouseup', onDragEnd);
   }
-  function onDragEnd() { dragging = false; onMouseUp(); }
+  function onDragMove(e: MouseEvent) {
+    const diff = e.clientX - dragStart;
+    pendingWidth = Math.max(180, Math.min(500, appState.sidebarWidth + diff));
+    dragStart = e.clientX;
+    if (dragRaf === null) {
+      dragRaf = requestAnimationFrame(() => {
+        if (pendingWidth !== null) appState.sidebarWidth = pendingWidth;
+        dragRaf = null;
+      });
+    }
+  }
+  function onDragEnd() {
+    dragging = false;
+    if (pendingWidth !== null) appState.sidebarWidth = pendingWidth;
+    pendingWidth = null;
+    window.removeEventListener('mousemove', onDragMove);
+    window.removeEventListener('mouseup', onDragEnd);
+    onMouseUp();
+  }
 
   async function detectTools() {
     // Always show the options — the user knows if they have these installed.
@@ -395,10 +413,6 @@
 
   $effect(() => { loadProjects(); detectTools(); });
 </script>
-
-<svelte:window on:mousemove={onDragMove} on:mouseup={onDragEnd}
-  on:keydown={(e) => { if (e.key === 'Escape') closeCtx(); }}
-/>
 
 {#if appState.sidebarVisible}
   <aside class="sidebar" style="width: {appState.sidebarWidth}px">

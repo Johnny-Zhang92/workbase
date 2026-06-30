@@ -19,4 +19,5 @@ export const appState = $state({
   paletteVisible: false,
   paletteAction: null as string | null,
   fileTreeVersion: 0,
+  perfStats: '' as string,
 });

@@ -15,34 +15,35 @@
   let nodes = $state<TreeNode[]>([]);
   let loading = $state(false);
   let loadedPath = $state('');
+  let lastFullRefresh = 0;
 
   async function loadRoot() {
     if (!rootPath) return;
-    // Only show loading indicator on first load — keep old tree visible during refresh
     if (nodes.length === 0) loading = true;
     try {
-      const [entries, gitResult] = await Promise.all([
-        invoke<DirEntry[]>('list_dir', { path: rootPath }),
-        invoke<{ branch: string; files: { path: string; status: string }[] }>('git_status', { rootPath }).catch(() => null),
-      ]);
-      const gitMap: Record<string, string> = {};
-      if (gitResult) {
-        for (const f of gitResult.files) {
-          gitMap[f.path.replace(/\\/g, '/')] = f.status;
-        }
-      }
+      const entries = await invoke<DirEntry[]>('list_dir', { path: rootPath });
+      // Preserve expanded/loaded state of existing nodes on refresh
+      const existingMap = new Map(nodes.map(n => [n.name, n]));
       nodes = entries.map(e => ({
         ...e,
-        loaded: false,
-        expanded: false,
-        gitStatus: gitMap[e.path.replace(/\\/g, '/')] || undefined,
+        loaded: existingMap.get(e.name)?.loaded ?? false,
+        expanded: existingMap.get(e.name)?.expanded ?? false,
+        gitStatus: appState.gitFiles[e.path.replace(/\\/g, '/')] || undefined,
       }));
       loadedPath = rootPath;
+      lastFullRefresh = Date.now();
     } catch (e) {
       console.error(e);
       nodes = [];
     }
     loading = false;
+  }
+
+  // Update git status on existing nodes only — no IPC, no node replacement
+  function applyGitStatus() {
+    for (const node of nodes) {
+      node.gitStatus = appState.gitFiles[node.path.replace(/\\/g, '/')] || undefined;
+    }
   }
 
   $effect(() => {
@@ -52,7 +53,13 @@
   // Auto-refresh when files change on disk
   $effect(() => {
     const _version = appState.fileTreeVersion;
-    if (rootPath && _version > 0) loadRoot();
+    if (!rootPath || _version === 0 || !appState.filePanelVisible) return;
+    // Always apply git status (instant, from reactive store)
+    applyGitStatus();
+    // Full reload (list_dir IPC) throttled to once per 10s
+    if (Date.now() - lastFullRefresh > 10_000) {
+      loadRoot();
+    }
   });
 </script>
 

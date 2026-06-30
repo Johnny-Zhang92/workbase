@@ -6,6 +6,11 @@ export class PtyBridge {
   private unlistenData: UnlistenFn | null = null;
   private unlistenExit: UnlistenFn | null = null;
 
+  // Write batching: accumulate rapid keystrokes into a single IPC call
+  private writeBuffer: string = '';
+  private writeTimer: ReturnType<typeof setTimeout> | null = null;
+  private static readonly WRITE_BATCH_MS = 2;
+
   constructor(sessionId: string) {
     this.sessionId = sessionId;
   }
@@ -20,11 +25,25 @@ export class PtyBridge {
     });
   }
 
-  async write(data: string): Promise<void> {
-    await invoke('pty_write', {
+  write(data: string): void {
+    this.writeBuffer += data;
+    if (this.writeTimer !== null) {
+      clearTimeout(this.writeTimer);
+    }
+    this.writeTimer = setTimeout(() => {
+      this.flushWrite();
+    }, PtyBridge.WRITE_BATCH_MS);
+  }
+
+  private flushWrite(): void {
+    if (this.writeBuffer.length === 0) return;
+    const data = this.writeBuffer;
+    this.writeBuffer = '';
+    this.writeTimer = null;
+    invoke('pty_write', {
       id: this.sessionId,
       data,
-    });
+    }).catch(() => {});
   }
 
   async resize(cols: number, rows: number): Promise<void> {
@@ -52,6 +71,11 @@ export class PtyBridge {
   }
 
   async destroy(): Promise<void> {
+    this.writeBuffer = '';
+    if (this.writeTimer !== null) {
+      clearTimeout(this.writeTimer);
+      this.writeTimer = null;
+    }
     if (this.unlistenData) this.unlistenData();
     if (this.unlistenExit) this.unlistenExit();
   }

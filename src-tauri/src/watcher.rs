@@ -25,10 +25,28 @@ impl WatchManager {
                 Ok(e) => e,
                 Err(err) => { eprintln!("[watch] error: {}", err); return; }
             };
-            // Filter out .git directory noise — those events flood the buffer
+            // Filter out .git, node_modules, and common sync/temp file churn
             let has_fs_change = event.paths.iter().any(|p| {
                 let s = p.to_string_lossy();
-                !s.contains("/.git/") && !s.contains("\\.git\\") && !s.ends_with("/.git") && !s.ends_with("\\.git")
+                if s.contains("/.git/") || s.contains("\\.git\\") || s.ends_with("/.git") || s.ends_with("\\.git") {
+                    return false;
+                }
+                if s.contains("/node_modules/") || s.contains("\\node_modules\\")
+                    || s.contains("/target/") || s.contains("\\target\\")
+                {
+                    return false;
+                }
+                let lower = s.to_lowercase();
+                if lower.contains(".tmp")
+                    || lower.contains("~$")
+                    || lower.contains(".odtmp")
+                    || lower.ends_with("desktop.ini")
+                    || lower.contains("\\.sync\\")
+                    || lower.contains("/.sync/")
+                {
+                    return false;
+                }
+                true
             });
             if !has_fs_change { return; }
             match event.kind {
@@ -51,7 +69,7 @@ impl WatchManager {
                 if rx.recv().is_err() { break; }
                 let mut quiet = false;
                 while !quiet {
-                    match rx.recv_timeout(std::time::Duration::from_millis(500)) {
+                    match rx.recv_timeout(std::time::Duration::from_millis(1500)) {
                         Ok(()) => {}
                         Err(_) => quiet = true,
                     }

@@ -11,18 +11,33 @@
 
   let dragStart = $state(0);
   let dragging = $state(false);
+  let dragRaf: number | null = null;
+  let pendingWidth: number | null = null;
 
-  function onDragStart(e: MouseEvent) { dragging = true; dragStart = e.clientX; }
-  function onDragMove(e: MouseEvent) {
-    if (!dragging) return;
-    const diff = dragStart - e.clientX;
-    appState.filePanelWidth = Math.max(180, Math.min(500, appState.filePanelWidth + diff));
-    dragStart = e.clientX;
+  function onDragStart(e: MouseEvent) {
+    dragging = true; dragStart = e.clientX;
+    window.addEventListener('mousemove', onDragMove);
+    window.addEventListener('mouseup', onDragEnd);
   }
-  function onDragEnd() { dragging = false; }
+  function onDragMove(e: MouseEvent) {
+    const diff = dragStart - e.clientX;
+    pendingWidth = Math.max(180, Math.min(500, appState.filePanelWidth + diff));
+    dragStart = e.clientX;
+    if (dragRaf === null) {
+      dragRaf = requestAnimationFrame(() => {
+        if (pendingWidth !== null) appState.filePanelWidth = pendingWidth;
+        dragRaf = null;
+      });
+    }
+  }
+  function onDragEnd() {
+    dragging = false;
+    if (pendingWidth !== null) appState.filePanelWidth = pendingWidth;
+    pendingWidth = null;
+    window.removeEventListener('mousemove', onDragMove);
+    window.removeEventListener('mouseup', onDragEnd);
+  }
 </script>
-
-<svelte:window on:mousemove={onDragMove} on:mouseup={onDragEnd} />
 
 {#if rootPath && appState.filePanelVisible}
   <div class="fp-resizer" role="separator" onmousedown={onDragStart}

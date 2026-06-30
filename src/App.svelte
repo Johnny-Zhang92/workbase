@@ -2,11 +2,13 @@
   import { invoke } from '@tauri-apps/api/core';
   import { listen } from '@tauri-apps/api/event';
   import { open } from '@tauri-apps/plugin-dialog';
-  import { check } from '@tauri-apps/plugin-updater';
+  import { tick } from 'svelte';
+  // import { check } from '@tauri-apps/plugin-updater';
   import { Terminal } from '@xterm/xterm';
   import { FitAddon } from '@xterm/addon-fit';
   import { SearchAddon } from '@xterm/addon-search';
-  import '@xterm/xterm/css/xterm.css';
+  import { CanvasAddon } from '@xterm/addon-canvas';
+    import '@xterm/xterm/css/xterm.css';
 
   import Sidebar from './lib/Sidebar.svelte';
   import TabBar from './lib/TabBar.svelte';
@@ -34,50 +36,11 @@
   let globalError = $state<string | null>(null);
   let crashInfo = $state<string | null>(null);
 
-  // ── Update checking ──
-
-  let updateAvailable = $state(false);
-  let updateVersion = $state('');
-  let updateNotes = $state('');
-  let updateDownloading = $state(false);
-
-  async function checkUpdate() {
-    try {
-      const update = await check();
-      if (update) {
-        updateAvailable = true;
-        updateVersion = update.version;
-        updateNotes = update.body || '';
-      }
-    } catch (_) {
-      // Silently ignore — GitHub may be unreachable
-    }
-  }
-
-  async function doUpdate() {
-    try {
-      updateDownloading = true;
-      const update = await check();
-      if (update) {
-        await update.downloadAndInstall();
-      }
-    } catch (e) {
-      console.error('Update failed:', e);
-      updateDownloading = false;
-    }
-  }
-
-  function skipUpdate() {
-    updateAvailable = false;
-  }
-
-  // Check for updates 5 seconds after init (don't block startup)
-  $effect(() => {
-    if (initDone) {
-      const timer = setTimeout(checkUpdate, 5000);
-      return () => clearTimeout(timer);
-    }
-  });
+  // ── Update checking (disabled for v0.1.x) ──
+  // let updateAvailable = $state(false);
+  // let updateVersion = $state('');
+  // let updateNotes = $state('');
+  // let updateDownloading = $state(false);
 
   async function checkPreviousCrash() {
     try {
@@ -137,6 +100,41 @@
     cwdDebounceTimer: ReturnType<typeof setTimeout> | null;
   }
 
+  function writeTerminalOutput(
+    pane: PaneInfo,
+    data: string,
+    state: { writeBuf: string; rafPending: boolean; lastWrite: number; perfCount: number; perfLast: number; sessionId: string },
+  ) {
+    state.writeBuf += data;
+    state.perfCount++;
+    const now = performance.now();
+
+    if (state.writeBuf.length < 4096 && !state.rafPending) {
+      pane.term.write(state.writeBuf);
+      if (now - state.perfLast > 2000) {
+        perfStatsText = `${state.sessionId}: ${state.perfCount}c/2s ${(state.writeBuf.length / 1024).toFixed(1)}KB`;
+        state.perfCount = 0;
+        state.perfLast = now;
+      }
+      state.writeBuf = '';
+      state.lastWrite = now;
+    } else if (!state.rafPending) {
+      state.rafPending = true;
+      requestAnimationFrame(() => {
+        const rNow = performance.now();
+        if (rNow - state.perfLast > 2000) {
+          perfStatsText = `${state.sessionId}: ${state.perfCount}c/2s ${(state.writeBuf.length / 1024).toFixed(1)}KB`;
+          state.perfCount = 0;
+          state.perfLast = rNow;
+        }
+        pane.term.write(state.writeBuf);
+        state.writeBuf = '';
+        state.rafPending = false;
+        state.lastWrite = rNow;
+      });
+    }
+  }
+
   interface TerminalTab {
     sessionId: string;
     sessionName: string;
@@ -155,6 +153,7 @@
   let settingsVisible = $state(false);
   let quickCommandVisible = $state(false);
   let slashPanelBridge = $state<PtyBridge | null>(null);
+  let perfStatsText = $state('');
 
   let activeSearchAddon = $derived(
     searchVisible ? (tabs.find(t => t.sessionId === activeTabId)?.pane.searchAddon ?? null) : null
@@ -185,13 +184,13 @@
       // / key: open quick command panel when at shell prompt
       if (!e.ctrlKey && !e.altKey && !e.metaKey && e.key === '/' && atPrompt()) {
         onSlash();
-        return false; // we handled it, don't send to PTY
+        return false;
       }
-      // Ctrl+Shift+C always copies (standard terminal shortcut)
+      // Ctrl+Shift+C always copies
       if (e.ctrlKey && e.shiftKey && (e.key === 'c' || e.key === 'C')) {
         const sel = term.getSelection();
         if (sel) { navigator.clipboard.writeText(sel).catch(() => {}); }
-        return false; // we handled it, don't let xterm send to PTY
+        return false;
       }
       // Ctrl+Shift+V always pastes
       if (e.ctrlKey && e.shiftKey && (e.key === 'v' || e.key === 'V')) {
@@ -204,16 +203,16 @@
         if (sel) {
           navigator.clipboard.writeText(sel).catch(() => {});
           term.clearSelection();
-          return false; // we handled it, don't send to PTY
+          return false;
         }
-        return true; // no selection — let xterm send Ctrl+C (SIGINT) to PTY
+        return true;
       }
-      // Ctrl+V: always paste (don't send literal Ctrl+V to PTY)
+      // Ctrl+V: always paste
       if (e.ctrlKey && !e.shiftKey && (e.key === 'v' || e.key === 'V')) {
         navigator.clipboard.readText().then(t => bridge.write(t)).catch(() => {});
         return false;
       }
-      return true; // let xterm process all other keys normally
+      return true;
     });
 
     // Select-to-copy: auto-copy when mouse selection ends
@@ -244,7 +243,7 @@
   async function ctxPaste(pane: PaneInfo) {
     try {
       const text = await navigator.clipboard.readText();
-      pane.bridge.write(text).catch(() => {});
+      pane.bridge.write(text);
     } catch (_) {}
     closeContextMenu();
   }
@@ -257,7 +256,6 @@
   function shellOsc7Init(shell: string): string | null {
     const lower = shell.toLowerCase();
     if (lower.endsWith('powershell.exe') || lower.endsWith('pwsh.exe')) {
-      // Use concatenation to avoid double-quote escaping in interpolated strings
       return String.raw`function prompt { $p = (Get-Location).Path; $e = [char]27; $bel = [char]7; Write-Host -NoNewline ($e + ']7;file://' + $env:COMPUTERNAME + '/' + ($p -replace '\\', '/') + $bel); 'PS ' + $p + '> ' }` + '\r\n';
     }
     if (lower.endsWith('bash') || lower.endsWith('bash.exe')) {
@@ -287,7 +285,6 @@
       try {
         lastCwd = decodeURIComponent(match[1]);
       } catch (_) { lastCwd = match[1]; }
-      // Strip leading / from Windows paths like /c:/Users
       if (lastCwd && /^\/[a-zA-Z]:/.test(lastCwd)) {
         lastCwd = lastCwd.slice(1);
       }
@@ -341,7 +338,6 @@
     if (!project) return;
     loadGitStatus(project.root_path);
 
-    // Start file watching for auto-refresh
     if (project.root_path !== watchedPath) {
       if (watchedPath) invoke('stop_watch').catch(() => {});
       invoke('start_watch', { path: project.root_path }).catch(() => {});
@@ -362,11 +358,12 @@
             const project = appState.projects.find(p => p.id === projectId);
             if (project) await loadGitStatus(project.root_path);
           }
-          appState.fileTreeVersion++;
-          // Flash status bar to give visible confirmation
+          if (appState.filePanelVisible) {
+            appState.fileTreeVersion++;
+          }
           fileWatchFlash = true;
           setTimeout(() => fileWatchFlash = false, 800);
-        }, 600);
+        }, 2000);
       });
     })();
     return () => { unlistenFn?.(); };
@@ -441,14 +438,17 @@
     invoke('set_setting', { key: 'windowState', value: state }).catch(() => {});
   }
 
-  // Auto-save when tabs or active session change (immediate, no debounce)
+  let windowSaveTimer: ReturnType<typeof setTimeout> | null = null;
   $effect(() => {
     const _tabIds = tabs.map(t => t.sessionId).join(',');
     const _active = appState.activeSessionId;
     const _project = appState.activeProjectId;
-    if (windowStateSaveEnabled && (_project !== null || _tabIds !== '')) {
+    if (!windowStateSaveEnabled || (_project === null && _tabIds === '')) return;
+    if (windowSaveTimer) clearTimeout(windowSaveTimer);
+    windowSaveTimer = setTimeout(() => {
       saveWindowState();
-    }
+      windowSaveTimer = null;
+    }, 500);
   });
 
   async function restoreWindowState() {
@@ -463,25 +463,21 @@
         windowStateSaveEnabled = true; return;
       }
 
-      // Restore project (sidebar will load sessions for this project)
       appState.activeProjectId = state.activeProjectId;
       await new Promise(r => setTimeout(r, 100));
 
       const openIds = state.openSessionIds as string[];
       const lastId = state.activeSessionId as string | undefined;
 
-      // Open tabs sequentially — set activeSessionId for each, the $effect opens them
       for (const sid of openIds) {
-        if (sid === lastId) continue; // open last
+        if (sid === lastId) continue;
         appState.activeSessionId = sid;
-        // Wait for openTab to finish (initializing guard)
         let waited = 0;
         while (appState.tabOpening && waited < 3000) {
           await new Promise(r => setTimeout(r, 50));
           waited += 50;
         }
       }
-      // Open the last tab (or the only tab) as active
       if (lastId && !tabs.find(t => t.sessionId === lastId)) {
         appState.activeSessionId = lastId;
       } else if (openIds.length > 0) {
@@ -491,7 +487,6 @@
     windowStateSaveEnabled = true;
   }
 
-  // Attempt restore once projects are loaded
   $effect(() => {
     if (appState.projects.length > 0 && !windowStateRestored) {
       restoreWindowState();
@@ -525,7 +520,6 @@
     }
   }
 
-  // Register apply callback for settings component
   (globalThis as any).__workbaseApplyTheme = applyThemeToTerminals;
 
   async function addProjectFromPalette() {
@@ -588,7 +582,6 @@
       const shell = savedShell || await invoke<string>('detect_shell');
       let cwd: string;
       if (session.cwd) {
-        // OSC 7 produces absolute paths; session creation may store relative ones
         if (/^[a-zA-Z]:/.test(session.cwd) || session.cwd.startsWith('/')) {
           cwd = session.cwd;
         } else {
@@ -604,7 +597,7 @@
 
       const { fontFamily, fontSize, theme } = await loadTerminalTheme();
       const term = new Terminal({
-        cursorBlink: true,
+        cursorBlink: false,
         fontSize,
         fontFamily,
         cols: 80,
@@ -618,47 +611,12 @@
       const searchAddon = new SearchAddon();
       term.loadAddon(searchAddon);
 
+      try { term.loadAddon(new CanvasAddon()); } catch (_) {}
+
       const bridge = new PtyBridge(sessionId);
 
-      // Track whether we're at a shell prompt for /-trigger
       let atPrompt = true;
 
-      // Set up event handlers on bridge BEFORE spawn
-      bridge.onData((data) => {
-        term.write(data);
-        if (data.includes('\n')) atPrompt = true;
-        const result = parseOsc7(osc7Buf + data);
-        osc7Buf = result.remaining;
-        if (result.cwd && result.cwd !== currentCwd) {
-          currentCwd = result.cwd;
-          appState.statusText = `${session.name} — ${currentCwd}`;
-          if (cwdDebounceTimer) clearTimeout(cwdDebounceTimer);
-          cwdDebounceTimer = setTimeout(() => {
-            invoke('update_session_cwd', { id: sessionIdNum, cwd: currentCwd }).catch(() => {});
-          }, 2000);
-        }
-      });
-
-      bridge.onExit((code) => {
-        term.write(`\r\n[Process exited with code ${code}]\r\n`);
-        appState.statusText = `${session.name} — ${t('status.exited', { code })}`;
-      });
-
-      term.onData((data) => {
-        atPrompt = false;
-        bridge.write(data).catch(() => {});
-      });
-
-      setupTerminalClipboard(term, bridge,
-        () => atPrompt,
-        () => {
-          slashPanelBridge = bridge;
-          activeTabId = sessionId;
-          quickCommandVisible = true;
-        },
-      );
-
-      // Add tab to trigger DOM render BEFORE term.open()
       const pane: PaneInfo = {
         ptyId: sessionId,
         term,
@@ -674,35 +632,80 @@
         pane,
         unlistenResize: () => { try { fitAddon.fit(); } catch (_) {} },
       };
+
+      const writeState = {
+        writeBuf: '',
+        rafPending: false,
+        lastWrite: 0,
+        perfCount: 0,
+        perfLast: performance.now(),
+        sessionId,
+      };
+
+      await bridge.onData((data) => {
+        if (data.includes('\n')) atPrompt = true;
+        if (data.includes('\x1b')) {
+          const result = parseOsc7(osc7Buf + data);
+          osc7Buf = result.remaining;
+          if (result.cwd && result.cwd !== currentCwd) {
+            currentCwd = result.cwd;
+            pane.currentCwd = currentCwd;
+            if (tab.sessionId === activeTabId) {
+              appState.statusText = `${session.name} — ${currentCwd}`;
+            }
+            if (cwdDebounceTimer) clearTimeout(cwdDebounceTimer);
+            cwdDebounceTimer = setTimeout(() => {
+              invoke('update_session_cwd', { id: sessionIdNum, cwd: currentCwd }).catch(() => {});
+            }, 2000);
+          }
+        }
+
+        writeTerminalOutput(pane, data, writeState);
+      });
+
+      await bridge.onExit((code) => {
+        term.write(`\r\n[Process exited with code ${code}]\r\n`);
+        appState.statusText = `${session.name} — ${t('status.exited', { code })}`;
+      });
+
+      term.onData((data) => {
+        atPrompt = false;
+        bridge.write(data);
+      });
+
+      setupTerminalClipboard(term, bridge,
+        () => atPrompt,
+        () => {
+          slashPanelBridge = bridge;
+          activeTabId = sessionId;
+          quickCommandVisible = true;
+        },
+      );
+
       tabs = [...tabs, tab];
       activeTabId = sessionId;
 
-      // Wait for DOM to render so containerRefs[sessionId] is populated
-      await new Promise(r => setTimeout(r, 0));
+      await tick();
 
       const container = containerRefs[sessionId];
-      if (container) {
-        term.open(container);
-        fitAddon.fit();
-      }
+      if (!container) throw new Error(`Terminal container not mounted: ${sessionId}`);
+      term.open(container);
+      fitAddon.fit();
 
-      // Resize handler after terminal is opened
       term.onResize(({ cols, rows }) => {
         bridge.resize(cols, rows).catch(() => {});
       });
 
-      // Now spawn the PTY — output goes to the visible xterm
       const { cols, rows } = term;
       await bridge.spawn(shell, cwd, cols, rows);
 
-      // Inject OSC 7 shell integration for cwd tracking
       const initCmd = shellOsc7Init(shell);
-      if (initCmd) bridge.write(initCmd).catch(() => {});
+      if (initCmd) bridge.write(initCmd);
 
       // Auto-execute launch command after shell is ready
       if (session.launch_command) {
         setTimeout(() => {
-          bridge.write(`${session.launch_command}\r`).catch(() => {});
+          bridge.write(`${session.launch_command}\r`);
         }, 500);
       }
 
@@ -735,12 +738,10 @@
   }
 
   async function closeTab(sessionId: string) {
-    // Just close the tab — keep the session in DB/sidebar for re-opening
     closeTabSilent(sessionId);
   }
 
   async function newTab() {
-    // Delegate to sidebar's addSession — it will call selectSession → triggers $effect → openTab
     if (!appState.activeProjectId) return;
     try {
       const name = t('sidebar.default_terminal', { n: appState.sessions.length + 1 });
@@ -764,7 +765,6 @@
   }
 
   function handleKeydown(e: KeyboardEvent) {
-    // Keybinding recording mode (triggered from Settings)
     if (recordingId.value) {
       const binding = eventToBinding(e);
       if (binding) {
@@ -775,13 +775,11 @@
       return;
     }
 
-    // When modals are open, only handle Escape
     if (settingsVisible || appState.paletteVisible || quickCommandVisible) {
       if (e.key === 'Escape') { e.preventDefault(); settingsVisible = false; appState.paletteVisible = false; quickCommandVisible = false; }
       return;
     }
 
-    // Ctrl+K: Quick Command Panel
     if (e.ctrlKey && !e.shiftKey && (e.key === 'k' || e.key === 'K')) {
       e.preventDefault();
       if (quickCommandVisible) {
@@ -856,12 +854,10 @@
     if (!project) return;
 
     try {
-      // Create a real DB session for the split pane
       const savedShell = await invoke<string | null>('get_setting', { key: 'shellPath' }).catch(() => null);
       const shell = savedShell || await invoke<string>('detect_shell');
       const cwd = tab.pane.currentCwd;
 
-      // Compute relative cwd from project root for DB storage
       let relCwd: string | null = null;
       if (cwd.startsWith(project.root_path)) {
         relCwd = cwd.slice(project.root_path.length).replace(/^[/\\]/, '') || null;
@@ -875,12 +871,11 @@
       });
       const newSessionId = `session_${newSession.id}`;
 
-      // Refresh sidebar sessions
       appState.sessions = await invoke<Session[]>('list_sessions', { projectId: session.project_id });
 
       const { fontFamily, fontSize, theme } = await loadTerminalTheme();
       const term = new Terminal({
-        cursorBlink: true,
+        cursorBlink: false,
         fontSize,
         fontFamily,
         cols: 80,
@@ -893,33 +888,13 @@
       const searchAddon = new SearchAddon();
       term.loadAddon(searchAddon);
 
+      try { term.loadAddon(new CanvasAddon()); } catch (_) {}
+
       const bridge = new PtyBridge(newSessionId);
 
-      // Track cwd changes for the split pane
       let splitCwd = cwd;
       let splitOsc7Buf = '';
       let splitAtPrompt = true;
-      bridge.onData((data) => {
-        term.write(data);
-        if (data.includes('\n')) splitAtPrompt = true;
-        const result = parseOsc7(splitOsc7Buf + data);
-        splitOsc7Buf = result.remaining;
-        if (result.cwd && result.cwd !== splitCwd) {
-          splitCwd = result.cwd;
-          invoke('update_session_cwd', { id: newSession.id, cwd: splitCwd }).catch(() => {});
-        }
-      });
-      bridge.onExit((code) => { term.write(`\r\n[Process exited with code ${code}]\r\n`); });
-      term.onData((data) => { splitAtPrompt = false; bridge.write(data).catch(() => {}); });
-
-      setupTerminalClipboard(term, bridge,
-        () => splitAtPrompt,
-        () => {
-          slashPanelBridge = bridge;
-          activeTabId = sessionId;
-          quickCommandVisible = true;
-        },
-      );
 
       const splitPaneInfo: PaneInfo = {
         ptyId: newSessionId,
@@ -936,25 +911,56 @@
       tab.splitRatio = 50;
       tab.activePane = 'secondary';
 
-      // Wait for DOM to render the new split pane container
-      await new Promise(r => setTimeout(r, 0));
+      const splitWriteState = {
+        writeBuf: '',
+        rafPending: false,
+        lastWrite: 0,
+        perfCount: 0,
+        perfLast: performance.now(),
+        sessionId: newSessionId,
+      };
 
-      // Primary pane DOM element stays the same — just re-fit
+      await bridge.onData((data) => {
+        if (data.includes('\n')) splitAtPrompt = true;
+        if (data.includes('\x1b')) {
+          const result = parseOsc7(splitOsc7Buf + data);
+          splitOsc7Buf = result.remaining;
+          if (result.cwd && result.cwd !== splitCwd) {
+            splitCwd = result.cwd;
+            splitPaneInfo.currentCwd = splitCwd;
+            invoke('update_session_cwd', { id: newSession.id, cwd: splitCwd }).catch(() => {});
+          }
+        }
+
+        writeTerminalOutput(splitPaneInfo, data, splitWriteState);
+      });
+      await bridge.onExit((code) => { term.write(`\r\n[Process exited with code ${code}]\r\n`); });
+      term.onData((data) => { splitAtPrompt = false; bridge.write(data); });
+
+      setupTerminalClipboard(term, bridge,
+        () => splitAtPrompt,
+        () => {
+          slashPanelBridge = bridge;
+          activeTabId = sessionId;
+          quickCommandVisible = true;
+        },
+      );
+
+      await tick();
+
       try { tab.pane.fitAddon.fit(); } catch (_) {}
 
-      // Attach split terminal to its new container
       const splitContainer = containerRefs[newSessionId];
-      if (splitContainer) {
-        term.open(splitContainer);
-        fitAddon.fit();
-      }
+      if (!splitContainer) throw new Error(`Split terminal container not mounted: ${newSessionId}`);
+      term.open(splitContainer);
+      fitAddon.fit();
 
       term.onResize(({ cols, rows }) => { bridge.resize(cols, rows).catch(() => {}); });
       const { cols, rows } = term;
       await bridge.spawn(shell, cwd, cols, rows);
 
       const initCmd2 = shellOsc7Init(shell);
-      if (initCmd2) bridge.write(initCmd2).catch(() => {});
+      if (initCmd2) bridge.write(initCmd2);
 
       term.focus();
     } catch (e) {
@@ -967,17 +973,14 @@
     if (!tab || !tab.splitPane) return;
     const splitPaneInfo = tab.splitPane;
 
-    // Kill the split pane PTY (session stays in DB/sidebar for re-opening)
     closePane(splitPaneInfo);
     delete containerRefs[splitPaneInfo.ptyId];
 
-    // Remove split from current tab
     tab.splitPane = undefined;
     tab.splitMode = undefined;
     tab.splitRatio = undefined;
     tab.activePane = undefined;
 
-    // Primary pane element stays in DOM — just re-fit and focus
     setTimeout(() => {
       try { tab.pane.fitAddon.fit(); } catch (_) {}
       tab.pane.term.focus();
@@ -1022,7 +1025,6 @@
     const tab = tabs.find(t => t.sessionId === id);
     if (!tab) return;
     appState.activeSessionId = id;
-    // Sync sidebar
     const sid = parseInt(id.replace('session_', ''));
     const session = appState.sessions.find(s => s.id === sid);
     if (session) appState.activeProjectId = session.project_id;
@@ -1102,6 +1104,10 @@
 <div class="statusbar" class:watch-flash={fileWatchFlash}>
   <span class="status-left">{appState.statusText}{#if fileWatchFlash} — {t('status.file_changed')}{/if}</span>
   <span class="status-right">
+    {#if perfStatsText}
+      <span class="perf-stats" title="PTY data rate">{perfStatsText}</span>
+      <span class="status-sep"></span>
+    {/if}
     {#if appState.gitBranch}
       {@const changed = Object.keys(appState.gitFiles).length}
       <span class="git-branch" title={`Branch: ${appState.gitBranch}`}>
@@ -1130,7 +1136,7 @@
       bridge={activeTab.pane.bridge}
       onClose={() => {
         if (slashPanelBridge) {
-          slashPanelBridge.write('/').catch(() => {});
+          slashPanelBridge.write('/');
           slashPanelBridge = null;
         }
         quickCommandVisible = false;
@@ -1153,17 +1159,6 @@
         <button class="crash-btn secondary" onclick={dismissCrash}>{t('error.crash_dismiss')}</button>
       </div>
     </div>
-  </div>
-{/if}
-
-<!-- Update notification -->
-{#if updateAvailable}
-  <div class="update-banner">
-    <span class="update-msg">Workbase {updateVersion} is available. Current: v0.1.0</span>
-    <button class="update-btn" onclick={doUpdate} disabled={updateDownloading}>
-      {updateDownloading ? 'Downloading...' : 'Update'}
-    </button>
-    <button class="update-skip" onclick={skipUpdate}>Skip</button>
   </div>
 {/if}
 
@@ -1203,7 +1198,6 @@
     width: 100%;
     background: #1e1e1e;
     overflow: hidden;
-    transition: padding-left 0.15s ease;
   }
   .terminal-area {
     height: 100%;
@@ -1220,10 +1214,10 @@
     position: absolute;
     inset: 0;
     padding: 4px;
-    display: none;
+    visibility: hidden;
   }
   .terminal-container.active {
-    display: block;
+    visibility: visible;
   }
   .split-layout.active {
     display: flex;
@@ -1320,28 +1314,6 @@
     background: #3c3c3c; color: #ccc;
   }
   .crash-btn.secondary:hover { background: #555; }
-
-  /* Update notification banner */
-  .update-banner {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
-    background: #007acc; color: #fff;
-    display: flex; align-items: center; justify-content: center; gap: 12px;
-    padding: 8px 16px; font-size: 13px;
-  }
-  .update-msg { flex: 1; text-align: center; }
-  .update-btn {
-    padding: 4px 14px; background: #fff; color: #007acc;
-    border: none; border-radius: 3px; font-size: 12px; font-weight: 600;
-    cursor: pointer;
-  }
-  .update-btn:hover { background: #e0e0e0; }
-  .update-btn:disabled { opacity: 0.6; cursor: default; }
-  .update-skip {
-    padding: 4px 10px; background: transparent; color: rgba(255,255,255,0.7);
-    border: 1px solid rgba(255,255,255,0.3); border-radius: 3px;
-    font-size: 12px; cursor: pointer;
-  }
-  .update-skip:hover { background: rgba(255,255,255,0.1); }
 
   /* Terminal context menu */
   .ctx-overlay {

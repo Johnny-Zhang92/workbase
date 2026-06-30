@@ -2,11 +2,11 @@ mod crash;
 mod db;
 mod files;
 mod git;
-mod pty_manager;
+mod terminal_engine;
 mod watcher;
 
 use db::{Database, Project, Session, SessionTemplate};
-use pty_manager::{PtyConfig, PtyManager};
+use terminal_engine::{PtyConfig, TerminalEngine};
 use watcher::WatchManager;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -14,7 +14,7 @@ use tauri::{AppHandle, Manager, State};
 
 struct AppState {
     db: Arc<Database>,
-    pty: Arc<Mutex<PtyManager>>,
+    pty: Arc<Mutex<TerminalEngine>>,
     watcher: Arc<Mutex<WatchManager>>,
 }
 
@@ -101,7 +101,7 @@ fn delete_template(state: State<AppState>, id: i64) -> Result<(), String> {
 // ── PTY commands ──
 
 #[tauri::command]
-fn pty_spawn(state: State<AppState>, session_id: String, shell: String, working_directory: String, cols: u16, rows: u16) -> Result<(), String> {
+fn pty_spawn(app: AppHandle, state: State<AppState>, session_id: String, shell: String, working_directory: String, cols: u16, rows: u16) -> Result<(), String> {
     let config = PtyConfig {
         shell,
         working_directory,
@@ -109,7 +109,7 @@ fn pty_spawn(state: State<AppState>, session_id: String, shell: String, working_
         rows,
         env: HashMap::new(),
     };
-    state.pty.lock().map_err(|e| format!("Lock: {}", e))?.spawn(&session_id, config)
+    state.pty.lock().map_err(|e| format!("Lock: {}", e))?.spawn(&session_id, config, app)
 }
 
 #[tauri::command]
@@ -134,7 +134,7 @@ fn pty_list(state: State<AppState>) -> Result<Vec<String>, String> {
 
 #[tauri::command]
 fn detect_shell() -> String {
-    pty_manager::detect_shell()
+    terminal_engine::detect_shell()
 }
 
 // ── Settings commands ──
@@ -262,9 +262,11 @@ fn open_in_explorer(path: String) -> Result<(), String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    eprintln!("[workbase] startup begin");
     env_logger::init();
 
     let db_path = db::get_db_path();
+    eprintln!("[workbase] db_path: {:?}", db_path);
     log::info!("Database path: {:?}", db_path);
 
     // Initialize crash handler
@@ -272,13 +274,15 @@ pub fn run() {
     crash::init(crashes_dir);
 
     let database = Database::open(&db_path).expect("Failed to open database");
+    eprintln!("[workbase] db opened");
     database.migrate().expect("Failed to run migrations");
+    eprintln!("[workbase] migration done");
 
     let db = Arc::new(database);
 
     tauri::Builder::default()
         .setup(move |app| {
-            let pty = PtyManager::new(app.handle().clone());
+            let pty = TerminalEngine::new();
             let watch = WatchManager::new();
             app.manage(AppState {
                 db: db.clone(),
@@ -290,7 +294,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
+        // .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             create_project,
             list_projects,

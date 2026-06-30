@@ -1,11 +1,10 @@
 <script lang="ts">
   import { invoke } from '@tauri-apps/api/core';
   import { t } from './i18n.svelte';
-  import type { PtyBridge } from './pty';
 
   interface Props {
     sessionId: string;
-    bridge: PtyBridge;
+    bridge: { write: (data: string) => void };
     onClose: () => void;
     onAction?: () => void;
   }
@@ -52,17 +51,17 @@
     onAction?.();
     switch (id) {
       case 'claude':
-        bridge.write('claude\r').catch(() => {});
+        bridge.write('claude\r');
         onClose();
         break;
       case 'codex':
-        bridge.write('codex\r').catch(() => {});
+        bridge.write('codex\r');
         onClose();
         break;
       case 'resume': {
         const cmd = resumeCommands[sessionId];
         if (cmd) {
-          bridge.write(cmd + '\r').catch(() => {});
+          bridge.write(cmd + '\r');
         }
         onClose();
         break;
