@@ -1,4 +1,6 @@
 use serde::Serialize;
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct GitStatus {
@@ -12,6 +14,14 @@ pub struct GitFileEntry {
     pub status: char,
 }
 
+fn git_cmd(repo: &str) -> std::process::Command {
+    let mut cmd = std::process::Command::new("git");
+    #[cfg(target_os = "windows")]
+    cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    cmd.arg("-C").arg(repo);
+    cmd
+}
+
 pub fn get_git_status(root_path: &str) -> Result<GitStatus, String> {
     let branch = get_branch(root_path).unwrap_or_default();
     let files = get_status_files(root_path).unwrap_or_default();
@@ -19,8 +29,8 @@ pub fn get_git_status(root_path: &str) -> Result<GitStatus, String> {
 }
 
 fn get_branch(repo: &str) -> Result<String, String> {
-    let output = std::process::Command::new("git")
-        .args(["-C", repo, "rev-parse", "--abbrev-ref", "HEAD"])
+    let output = git_cmd(repo)
+        .args(["rev-parse", "--abbrev-ref", "HEAD"])
         .output()
         .map_err(|e| format!("git rev-parse: {}", e))?;
     if output.status.success() {
@@ -62,8 +72,8 @@ fn parse_porcelain_line(line: &str, repo: &str) -> Option<GitFileEntry> {
 }
 
 fn get_status_files(repo: &str) -> Result<Vec<GitFileEntry>, String> {
-    let output = std::process::Command::new("git")
-        .args(["-C", repo, "status", "--porcelain=v1"])
+    let output = git_cmd(repo)
+        .args(["status", "--porcelain=v1"])
         .output()
         .map_err(|e| format!("git status: {}", e))?;
     if !output.status.success() {

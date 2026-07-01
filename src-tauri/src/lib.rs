@@ -8,6 +8,8 @@ mod watcher;
 use db::{Database, Project, Session, SessionTemplate};
 use terminal_engine::{PtyConfig, TerminalEngine};
 use watcher::WatchManager;
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Manager, State};
@@ -158,8 +160,9 @@ fn list_dir(path: String) -> Result<Vec<files::DirEntry>, String> {
 fn open_file(path: String) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
-        std::process::Command::new("cmd")
-            .args(["/c", "start", "", &path])
+        let mut cmd = std::process::Command::new("cmd");
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        cmd.args(["/c", "start", "", &path])
             .spawn()
             .map_err(|e| format!("Failed to open: {}", e))?;
     }
