@@ -89,7 +89,7 @@
       const name = selected.split(/[/\\]/).pop() || selected;
       appState.statusText = t('sidebar.status.adding');
       await invoke('create_project', { name, rootPath: selected });
-      await loadProjects();
+      await loadProjects(true);
       const newProject = appState.projects.find(p => p.root_path === selected);
       if (newProject) await selectProject(newProject.id);
       appState.statusText = t('sidebar.status.added', { name });
@@ -107,7 +107,7 @@
         appState.sessions = [];
       }
       collapse(id);
-      await loadProjects();
+      await loadProjects(true);
     } catch (e) { console.error(e); }
   }
 
@@ -240,11 +240,11 @@
     appState.statusText = `${session.name} — ${t('status.active')}`;
   }
 
-  async function loadProjects() {
+  async function loadProjects(skipAutoRestore = false) {
     try {
       const list = await invoke<Project[]>('list_projects');
       appState.projects = list;
-      if (!hasAutoRestored && list.length > 0) {
+      if (!skipAutoRestore && !hasAutoRestored && list.length > 0) {
         hasAutoRestored = true;
         for (const project of list) {
           const ss = await invoke<Session[]>('list_sessions', { projectId: project.id });
@@ -284,7 +284,7 @@
     try {
       if (editingType === 'project') {
         await invoke('rename_project', { id: editingId, name });
-        await loadProjects();
+        await loadProjects(true);
         appState.statusText = t('sidebar.status.renamed_project', { name });
       } else if (editingType === 'session') {
         await invoke('rename_session', { id: editingId, name });
@@ -372,11 +372,13 @@
     closeCtx();
   }
 
-  function toggleProject(id: number) {
-    if (isExpanded(id)) collapse(id);
-    else expand(id);
-    if (!isExpanded(id)) return;
-    if (appState.activeProjectId !== id) selectProject(id);
+  async function toggleProject(id: number) {
+    try {
+      if (isExpanded(id)) collapse(id);
+      else expand(id);
+      if (!isExpanded(id)) return;
+      if (appState.activeProjectId !== id) await selectProject(id);
+    } catch (e) { console.error('toggleProject error:', e); }
   }
 
   function onDragStart(e: MouseEvent) {
