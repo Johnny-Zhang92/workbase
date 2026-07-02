@@ -1,6 +1,6 @@
 [package]
 name = "workbase"
-version = "0.1.2"
+version = "0.1.3"
 description = "A lightweight, project-centric terminal workspace"
 authors = ["ZhangLiHua"]
 edition = "2021"

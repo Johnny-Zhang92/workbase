@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
   import { appState } from './stores.svelte';
   import { t } from './i18n.svelte';
@@ -19,17 +20,21 @@
 
   async function loadRoot() {
     if (!rootPath) return;
-    if (nodes.length === 0) loading = true;
+    if (untrack(() => nodes.length === 0)) loading = true;
     try {
       const entries = await invoke<DirEntry[]>('list_dir', { path: rootPath });
-      // Preserve expanded/loaded state of existing nodes on refresh
-      const existingMap = new Map(nodes.map(n => [n.name, n]));
-      nodes = entries.map(e => ({
-        ...e,
-        loaded: existingMap.get(e.name)?.loaded ?? false,
-        expanded: existingMap.get(e.name)?.expanded ?? false,
-        gitStatus: appState.gitFiles[e.path.replace(/\\/g, '/')] || undefined,
-      }));
+      // Preserve expanded/loaded/children state of existing nodes on refresh
+      const existingMap = untrack(() => new Map(nodes.map(n => [n.name, n])));
+      nodes = entries.map(e => {
+        const existing = existingMap.get(e.name);
+        return {
+          ...e,
+          loaded: existing?.loaded ?? false,
+          expanded: existing?.expanded ?? false,
+          children: existing?.children,
+          gitStatus: appState.gitFiles[e.path.replace(/\\/g, '/')] || undefined,
+        };
+      });
       loadedPath = rootPath;
       lastFullRefresh = Date.now();
     } catch (e) {

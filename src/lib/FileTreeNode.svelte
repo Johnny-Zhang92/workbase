@@ -24,6 +24,20 @@
     rootPath?: string;
   } = $props();
 
+  let expanded = $state(node.expanded);
+  let children = $state(node.children ?? []);
+  let loaded = $state(node.loaded);
+  let nodeRef = node;
+
+  // Sync when parent FileTree refreshes and replaces the node object (same key, new ref)
+  $effect(() => {
+    if (node === nodeRef) return;
+    nodeRef = node;
+    expanded = node.expanded;
+    loaded = node.children != null && node.loaded;
+    children = node.children ?? [];
+  });
+
   let gitStatus = $derived(node.gitStatus ?? '');
   const gitClass: Record<string, string> = {
     M: 'git-m', A: 'git-a', D: 'git-d', '?': 'git-u', U: 'git-u',
@@ -36,27 +50,32 @@
   let ctxY = $state(0);
 
   async function loadChildren() {
-    if (node.loaded || !node.is_dir) return;
+    if (loaded || !node.is_dir) return;
     try {
       const entries = await invoke<DirEntry[]>('list_dir', { path: node.path });
       const gitMap: Record<string, string> = {};
       for (const [k, v] of Object.entries(appState.gitFiles)) {
         gitMap[k] = v;
       }
-      node.children = entries.map(e => ({
+      children = entries.map(e => ({
         ...e,
         loaded: false,
         expanded: false,
         gitStatus: gitMap[e.path.replace(/\\/g, '/')] || undefined,
       }));
+      loaded = true;
+      // Sync back to node so FileTree's full refresh can preserve state
+      node.children = children;
       node.loaded = true;
+      node.expanded = expanded;
     } catch (e) { console.error(e); }
   }
 
   function toggle() {
     if (!node.is_dir) { onSelect?.(node.path); return; }
-    node.expanded = !node.expanded;
-    if (node.expanded && !node.loaded) loadChildren();
+    expanded = !expanded;
+    node.expanded = expanded;
+    if (expanded && !loaded) loadChildren();
   }
 
   async function dblClick() {
@@ -108,7 +127,7 @@
   oncontextmenu={showCtx}
   onkeydown={(e) => { if (e.key === 'Enter') toggle(); }}
   role="treeitem" aria-selected={false} tabindex="0">
-  <span class="ft-arrow">{node.is_dir ? (node.expanded ? '▾' : '▸') : ''}</span>
+  <span class="ft-arrow">{node.is_dir ? (expanded ? '▾' : '▸') : ''}</span>
   <span class="ft-icon">{node.is_dir ? '📁' : '📄'}</span>
   <span class="ft-name">{node.name}</span>
   {#if gitStatus}
@@ -141,8 +160,8 @@
   </div>
 {/if}
 
-{#if node.is_dir && node.expanded && node.children}
-  {#each node.children as child (child.path)}
+{#if node.is_dir && expanded && children.length > 0}
+  {#each children as child (child.path)}
     <FileTreeNode node={child} depth={depth + 1} {onSelect} {rootPath} />
   {/each}
 {/if}

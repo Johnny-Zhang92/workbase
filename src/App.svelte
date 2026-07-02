@@ -463,8 +463,20 @@
         windowStateSaveEnabled = true; return;
       }
 
+      // Wait for any in-progress openTab from loadProjects auto-restore to finish
+      let waited = 0;
+      while (appState.tabOpening && waited < 3000) {
+        await new Promise(r => setTimeout(r, 50));
+        waited += 50;
+      }
+
+      // Close tabs from any prior auto-restore and load correct project's sessions
+      appState.closeAllTabs = true;
+      await new Promise(r => setTimeout(r, 50));
+
       appState.activeProjectId = state.activeProjectId;
-      await new Promise(r => setTimeout(r, 100));
+      appState.sessions = await invoke<Session[]>('list_sessions', { projectId: state.activeProjectId });
+      await new Promise(r => setTimeout(r, 50));
 
       const openIds = state.openSessionIds as string[];
       const lastId = state.activeSessionId as string | undefined;
@@ -657,6 +669,7 @@
             cwdDebounceTimer = setTimeout(() => {
               invoke('update_session_cwd', { id: sessionIdNum, cwd: currentCwd }).catch(() => {});
             }, 2000);
+            pane.cwdDebounceTimer = cwdDebounceTimer;
           }
         }
 
